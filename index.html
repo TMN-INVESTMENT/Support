@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TMN INVESTMENT - Mobile Money Payment</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Secure mobile money payments via AzamPay - Tigo, Airtel, M-Pesa, Halopesa, and AzamPesa">
+    <meta name="keywords" content="Tanzania, mobile payment, AzamPay, Tigo Pesa, Airtel Money, M-Pesa">
+    <meta name="author" content="TMN INVESTMENT">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/favicon.png">
+    
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="style.css" as="style">
+    <link rel="preload" href="main.js" as="script">
+</head>
+<body>
+    <!-- Loading Overlay (hidden by default) -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="spinner"></div>
+        <p>Processing your payment...</p>
+    </div>
+
+    <div class="container">
+        <!-- Header with Logo/Brand -->
+        <div class="brand-header">
+            <img src="/logo.png" alt="TMN INVESTMENT" class="brand-logo" onerror="this.style.display='none'">
+            <h1 class="brand-name">TMN INVESTMENT</h1>
+        </div>
+
+        <!-- Main Payment Card -->
+        <div class="payment-card" role="main" aria-label="Payment Form">
+            <div class="header">
+                <h2>Mobile Money Payment</h2>
+                <p class="subtitle">Pay securely using your mobile money account</p>
+                
+                <!-- Provider Icons -->
+                <div class="provider-icons" aria-label="Accepted payment providers">
+                    <span class="provider-icon tigo" title="Tigo Pesa">TIGO</span>
+                    <span class="provider-icon airtel" title="Airtel Money">AIRTEL</span>
+                    <span class="provider-icon mpesa" title="M-Pesa">MPESA</span>
+                    <span class="provider-icon halopesa" title="Halopesa">HALO</span>
+                    <span class="provider-icon azampesa" title="AzamPesa">AZAM</span>
+                </div>
+            </div>
+            
+            <!-- Payment Form -->
+            <form id="paymentForm" novalidate>
+                <!-- Full Name Field -->
+                <div class="form-group">
+                    <label for="customerName">
+                        Full Name <span class="required" aria-hidden="true">*</span>
+                    </label>
+                    <input type="text" 
+                           id="customerName" 
+                           name="customerName" 
+                           placeholder="Enter your full name" 
+                           required
+                           autocomplete="name"
+                           aria-required="true"
+                           pattern="[A-Za-z\s]{2,50}"
+                           title="Please enter a valid name (2-50 characters, letters only)">
+                    <small class="field-hint">As it appears on your ID</small>
+                    <div class="field-error" id="nameError" style="display: none;"></div>
+                </div>
+                
+                <!-- Email Field (Optional) -->
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" 
+                           id="email" 
+                           name="email" 
+                           placeholder="customer@example.com"
+                           autocomplete="email"
+                           title="Enter a valid email address (optional)">
+                    <small class="field-hint">For receipt and transaction updates</small>
+                </div>
+                
+                <!-- Mobile Number Field -->
+                <div class="form-group">
+                    <label for="mobile">
+                        Mobile Number <span class="required" aria-hidden="true">*</span>
+                    </label>
+                    <div class="mobile-input-wrapper">
+                        <span class="country-code">+255</span>
+                        <input type="tel" 
+                               id="mobile" 
+                               name="mobile" 
+                               placeholder="7XXXXXXXX" 
+                               required
+                               autocomplete="tel"
+                               aria-required="true"
+                               pattern="[0-9]{9}"
+                               maxlength="9"
+                               title="Enter 9 digits after 255">
+                    </div>
+                    <small class="field-hint">Enter 9 digits (e.g., 713295803 or 0713295803)</small>
+                    <div class="field-error" id="mobileError" style="display: none;"></div>
+                </div>
+                
+                <!-- Amount Field -->
+                <div class="form-group">
+                    <label for="amount">
+                        Amount (TZS) <span class="required" aria-hidden="true">*</span>
+                    </label>
+                    <div class="amount-input-wrapper">
+                        <span class="currency-symbol">TZS</span>
+                        <input type="number" 
+                               id="amount" 
+                               name="amount" 
+                               min="100" 
+                               step="100" 
+                               placeholder="0" 
+                               required
+                               aria-required="true"
+                               title="Minimum amount: 100 TZS">
+                    </div>
+                    <small class="field-hint">Minimum: 100 TZS</small>
+                    <div class="field-error" id="amountError" style="display: none;"></div>
+                </div>
+                
+                <!-- Network Provider Field -->
+                <div class="form-group">
+                    <label for="provider">
+                        Network Provider <span class="required" aria-hidden="true">*</span>
+                    </label>
+                    <select id="provider" name="provider" required aria-required="true">
+                        <option value="" disabled selected>-- Select your provider --</option>
+                        <option value="Tigo">Tigo Pesa</option>
+                        <option value="Airtel">Airtel Money</option>
+                        <option value="Mpesa">M-Pesa</option>
+                        <option value="Halopesa">Halopesa</option>
+                        <option value="Azampesa">AzamPesa</option>
+                    </select>
+                    <div class="field-error" id="providerError" style="display: none;"></div>
+                </div>
+                
+                <!-- Terms and Conditions -->
+                <div class="terms-group">
+                    <input type="checkbox" id="terms" name="terms" required>
+                    <label for="terms">I agree to the <a href="/terms" target="_blank">Terms and Conditions</a> and <a href="/privacy" target="_blank">Privacy Policy</a></label>
+                </div>
+                
+                <!-- Submit Button -->
+                <button type="submit" id="payButton" class="pay-button">
+                    <span class="button-text">Pay Now</span>
+                    <span class="loading-spinner" style="display: none;">
+                        <span class="spinner-small"></span>
+                        Processing...
+                    </span>
+                </button>
+            </form>
+            
+            <!-- Result Message Container -->
+            <div id="result" class="result" role="alert" aria-live="polite" style="display: none;"></div>
+        </div>
+        
+        <!-- Recent Transactions Section -->
+        <div class="transactions-card" aria-label="Recent Transactions">
+            <div class="transactions-header">
+                <h3>Recent Transactions</h3>
+                <span class="transaction-count" id="transactionCount">0</span>
+            </div>
+            
+            <!-- Transactions List -->
+            <div id="recentTransactions" class="transactions-list">
+                <div class="loading-transactions">
+                    <div class="spinner-small"></div>
+                    <p>Loading recent transactions...</p>
+                </div>
+            </div>
+            
+            <!-- View All Link -->
+            <div class="transactions-footer">
+                <a href="/transactions" class="view-all-link">View All Transactions →</a>
+            </div>
+        </div>
+        
+        <!-- Support Section -->
+        <div class="support-section">
+            <p>Need help? Contact our support</p>
+            <div class="support-links">
+                <a href="tel:+255123456789" class="support-link">
+                    📞 Call Us
+                </a>
+                <a href="mailto:support@tmn-investment.org" class="support-link">
+                    ✉️ Email Support
+                </a>
+                <a href="/faq" class="support-link">
+                    ❓ FAQ
+                </a>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <footer class="footer">
+            <p>&copy; 2025 TMN INVESTMENT. All rights reserved.</p>
+            <p class="security-badge">🔒 Secure Payment | SSL Encrypted</p>
+        </footer>
+    </div>
+
+    <!-- Main JavaScript -->
+    <script src="main.js"></script>
+    
+    <!-- Fallback for older browsers -->
+    <script>
+        // Check if fetch is supported, provide fallback
+        if (!window.fetch) {
+            document.getElementById('result').innerHTML = 'Your browser is outdated. Please update to the latest version.';
+            document.getElementById('result').style.display = 'block';
+            document.getElementById('result').className = 'result error';
+        }
+    </script>
+</body>
+</html>

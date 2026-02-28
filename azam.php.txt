@@ -1,0 +1,131 @@
+<?php
+// api/azam.php - Debug Version
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+// Set JSON header
+header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type');
+
+// Handle OPTIONS request
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
+// Test endpoint
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['ping'])) {
+    echo json_encode([
+        'success' => true,
+        'message' => 'API is alive',
+        'timestamp' => time(),
+        'php_version' => PHP_VERSION
+    ]);
+    exit();
+}
+
+// Only accept POST for payments
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+    exit();
+}
+
+// Get raw input
+$rawInput = file_get_contents('php://input');
+if (!$rawInput) {
+    echo json_encode(['success' => false, 'message' => 'No input received']);
+    exit();
+}
+
+// Decode JSON
+$input = json_decode($rawInput, true);
+if (!$input) {
+    echo json_encode([
+        'success' => false, 
+        'message' => 'Invalid JSON: ' . json_last_error_msg(),
+        'raw' => substr($rawInput, 0, 200)
+    ]);
+    exit();
+}
+
+// Your credentials
+$credentials = [
+    'clientId' => '83a24c2a-70ca-47fc-9c2d-8353a863bcdf',
+    'clientSecret' => 'QHKsaEC0JEelGv2KafjkXGS96wUGgju5OFq7Q4zNJ18+EZVh3twUvhmM9cFku+pFBu9otjBTj9ZRLiHd/Armxt1ZfkM0RXg3KA93nb3iTY1z4cBdIxd7wj6Jjlz4YrfuyqBdcPP38a7YasrPpRoDHPsRJCi90Ol1+os0zbN0Wh455PgSVt9gGKKSn6EDBAQ/t1bCEgzNJ6ORb++Kqw5qQlaT+271UbCthPV1TPTevBY6YO6Jz6f41YNJbt0pXakK6GSLzeioCy0IFzbNysXY6kaTpOetBPKUGysLaFRkL+yMk5DsU4sJg0RkcHTR25pqhe/COYbEGgq1SmpQifZKvIk0YGiCDhhTNkgXc790vTyDWxn88cnzHVV8wvhfIW2vGnxql00k2Kqas/GoDiT+qMu67N0/i/+eNBFZ0joCWPRFE+cIQUQHH6pkPyYH6lVr2AUUXCSNEP5SjERLNARbiEMZqDVc/cgWdoo747jv4KxzVfKfCCi1NDl7dsoIwf9VDr4kKu7qIKgO8hdWgp4QLyNTwchMrKdc89367j8k1KV5FvJdMlHKknL5SR9v/kWxOJSw43Z+L4lGQomiahoNO31W5ZuOj8d43fAYZIgX6fIDAnxfUPhwCqtjYAqrKOxb6oo+CHlttUssbNrLK5gV8F+e6pxgL59sSB/45CrjLtM=',
+    'token' => 'a5bc46fa-d873-4fe2-8851-735fd3c50aba',
+    'appName' => 'TMN INVESTMENT'
+];
+
+// Format mobile number
+function formatMobile($num) {
+    $num = preg_replace('/[^0-9]/', '', $num);
+    if (substr($num, 0, 1) === '0') {
+        return '255' . substr($num, 1);
+    } elseif (substr($num, 0, 1) === '7') {
+        return '255' . $num;
+    }
+    return $num;
+}
+
+try {
+    // Format mobile
+    $mobile = formatMobile($input['mobile']);
+    
+    // Step 1: Get token
+    $tokenUrl = 'https://sandbox.azampay.co.tz/AppRegistration/GenerateToken';
+    
+    $tokenData = [
+        'appName' => $credentials['appName'],
+        'clientId' => $credentials['clientId'],
+        'clientSecret' => $credentials['clientSecret']
+    ];
+    
+    $ch = curl_init($tokenUrl);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($tokenData));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+    
+    $tokenResponse = curl_exec($ch);
+    $tokenHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    if (!$tokenResponse) {
+        throw new Exception('No response from token endpoint');
+    }
+    
+    $tokenResult = json_decode($tokenResponse, true);
+    
+    // For debugging, return token response
+    if (isset($_GET['debug'])) {
+        echo json_encode([
+            'success' => false,
+            'debug' => true,
+            'token_response' => $tokenResult,
+            'token_http' => $tokenHttpCode,
+            'mobile_formatted' => $mobile,
+            'input' => $input
+        ]);
+        exit();
+    }
+    
+    // For now, return success for testing
+    echo json_encode([
+        'success' => true,
+        'message' => 'Payment initiated (TEST MODE)',
+        'transactionId' => 'TXN_' . time(),
+        'reference' => $input['reference'],
+        'mobile' => $mobile
+    ]);
+    
+} catch (Exception $e) {
+    echo json_encode([
+        'success' => false,
+        'message' => 'Error: ' . $e->getMessage()
+    ]);
+}
+?>
